@@ -4,8 +4,6 @@
 
 Connect Claude to your Strava account and ask questions in plain English: "How far did I run this month?", "Analyze my last ride", or "Show me my fastest segments."
 
-> **Note:** This is a fork of [r-huijts/strava-mcp](https://github.com/r-huijts/strava-mcp) maintained at [thaim/strava-mcp](https://github.com/thaim/strava-mcp). It includes additional fixes and tools that are not yet part of the upstream npm package, so this fork is intended to be **cloned and built from source** rather than installed via npm.
-
 ---
 
 ## What Can You Do With This?
