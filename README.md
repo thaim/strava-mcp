@@ -4,12 +4,6 @@
 
 Connect Claude to your Strava account and ask questions in plain English: "How far did I run this month?", "Analyze my last ride", or "Show me my fastest segments."
 
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/r-huijts-strava-mcp-badge.png)](https://mseep.ai/app/r-huijts-strava-mcp)
-
-<a href="https://glama.ai/mcp/servers/@r-huijts/strava-mcp">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/@r-huijts/strava-mcp/badge" alt="Strava Server MCP server" />
-</a>
-
 ---
 
 ## What Can You Do With This?
@@ -48,45 +42,54 @@ Once connected, just talk to Claude like you're talking to a friend who has acce
 
 ## Quick Start (3 Steps)
 
-### Step 1: Add to Claude Desktop
+### Step 1: Clone and Build
+
+```bash
+git clone https://github.com/thaim/strava-mcp.git
+cd strava-mcp
+npm install
+npm run build
+```
+
+This produces the runnable server at `dist/server.js`.
+
+### Step 2: Register the Server with Claude
+
+**Claude Desktop**
 
 Open your Claude Desktop configuration file:
 - **Mac**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-Add this to the file:
+Add this to the file (use the absolute path to your clone):
 
 ```json
 {
   "mcpServers": {
     "strava": {
-      "command": "npx",
-      "args": ["-y", "@r-huijts/strava-mcp-server"]
+      "command": "node",
+      "args": ["/path/to/strava-mcp/dist/server.js"]
     }
   }
 }
 ```
 
-### Step 1 (alternative): Add to Claude Code
+Then close and reopen Claude Desktop to load the new configuration.
 
-You can add this MCP server to claude code with the following command:
+**Claude Code (alternative)**
 
+```bash
+claude mcp add --transport stdio strava -- node /path/to/strava-mcp/dist/server.js
 ```
-claude mcp add --transport stdio strava -- npx @r-huijts/strava-mcp-server
-```
 
-You can confirm successful instalation as follows:
+Confirm the server is registered:
 
 ```
 % claude mcp list
 Checking MCP server health...
 
-strava: npx @r-huijts/strava-mcp-server - ✓ Connected
+strava: node /path/to/strava-mcp/dist/server.js - ✓ Connected
 ```
-
-### Step 2: Restart Claude Desktop
-
-Close and reopen Claude Desktop to load the new configuration.
 
 ### Step 3: Connect Your Strava
 
@@ -135,60 +138,6 @@ That's it! You only need to do this once.
 - **Check status**: "Am I connected to Strava?"
 - **Reconnect**: "Connect my Strava account" (use `force: true` to reconnect)
 - **Disconnect**: "Disconnect my Strava account"
-
----
-
-## Installation Options
-
-### Option A: Just Use It (Recommended)
-
-No installation needed! The `npx` command in the Quick Start automatically downloads and runs the latest version.
-
-### Option B: Install Globally
-
-If you prefer to install it once:
-
-```bash
-npm install -g @r-huijts/strava-mcp-server
-```
-
-Then update your Claude config to use:
-
-```json
-{
-  "mcpServers": {
-    "strava": {
-      "command": "strava-mcp-server"
-    }
-  }
-}
-```
-
-**Note:** Even though the package name is `@r-huijts/strava-mcp-server`, the executable name remains `strava-mcp-server` for backward compatibility.
-
-### Option C: Build from Source
-
-For developers who want to modify the code:
-
-   ```bash
-   git clone https://github.com/r-huijts/strava-mcp.git
-   cd strava-mcp
-   npm install
-   npm run build
-   ```
-
-Then point Claude to your local build:
-
-```json
-{
-  "mcpServers": {
-    "strava": {
-      "command": "node",
-      "args": ["/path/to/strava-mcp/dist/server.js"]
-    }
-  }
-}
-```
 
 ---
 
@@ -321,17 +270,15 @@ Then point Claude to your local build:
 ### Claude doesn't see the Strava tools
 
 - Make sure your `claude_desktop_config.json` is valid JSON (no trailing commas!)
+- Confirm the `args` path points to your clone's `dist/server.js` and that you ran `npm run build`
 - Restart Claude Desktop after making config changes
 - Check Claude's developer console for error messages
 
-### JSONRPC.ProtocolTransportError after package name change
+### Server fails to start
 
-If you're getting a JSONRPC error after updating to `@r-huijts/strava-mcp-server`:
-
-1. **Clear npx cache**: Run `rm -rf ~/.npm/_npx` in terminal
-2. **Verify config** uses `@r-huijts/strava-mcp-server` (not the old `strava-mcp-server`)
-3. **Restart Claude Desktop** completely (quit and reopen)
-4. **Test manually**: Run `npx -y @r-huijts/strava-mcp-server` - you should see "Starting Strava MCP Server v1.2.1..."
+- Make sure you ran `npm install` and `npm run build` in the clone directory
+- Verify `dist/server.js` exists
+- Test manually: run `node /path/to/strava-mcp/dist/server.js` - you should see "Starting Strava MCP Server..."
 
 ---
 
@@ -370,6 +317,8 @@ npm run build
 npm test
 ```
 
+Run during development with live reload via `npm run dev`.
+
 ### Activity Streams Optimization
 
 The `get-activity-streams` tool uses a compact format by default, reducing payload size by ~70-80% while preserving all data:
@@ -383,11 +332,7 @@ The compact format includes comprehensive metadata (units, descriptions, statist
 
 ### API Reference
 
-The server implements the Model Context Protocol (MCP) and exposes 25 tools for Strava API v3. See the source code in `src/tools/` for implementation details.
-
-### Contributing
-
-Contributions welcome! Please submit a Pull Request.
+The server implements the Model Context Protocol (MCP) for Strava API v3. See the source code in `src/tools/` for implementation details.
 
 </details>
 
@@ -396,7 +341,3 @@ Contributions welcome! Please submit a Pull Request.
 ## License
 
 MIT License - see LICENSE file for details.
-
----
-
-**Questions?** Open an issue on [GitHub](https://github.com/r-huijts/strava-mcp/issues).
