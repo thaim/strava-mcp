@@ -334,10 +334,6 @@ The compact format includes comprehensive metadata (units, descriptions, statist
 
 The server implements the Model Context Protocol (MCP) for Strava API v3. See the source code in `src/tools/` for implementation details.
 
-### Contributing
-
-Contributions welcome! Please submit a Pull Request to [thaim/strava-mcp](https://github.com/thaim/strava-mcp).
-
 </details>
 
 ---
@@ -345,7 +341,3 @@ Contributions welcome! Please submit a Pull Request to [thaim/strava-mcp](https:
 ## License
 
 MIT License - see LICENSE file for details.
-
----
-
-**Questions?** Open an issue on [GitHub](https://github.com/thaim/strava-mcp/issues).
