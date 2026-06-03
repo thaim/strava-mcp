@@ -1,6 +1,6 @@
 # Troubleshooting JSONRPC Error After Package Name Change
 
-If you're getting `JSONRPC.ProtocolTransportError fout 3` after updating to `@r-huijts/strava-mcp-server`, try these steps:
+If you're getting `JSONRPC.ProtocolTransportError fout 3` after updating to `@thaim/strava-mcp`, try these steps:
 
 ## Step 1: Clear npx Cache
 
@@ -19,13 +19,13 @@ Make sure your `~/Library/Application Support/Claude/claude_desktop_config.json`
   "mcpServers": {
     "strava": {
       "command": "npx",
-      "args": ["-y", "@r-huijts/strava-mcp-server"]
+      "args": ["-y", "@thaim/strava-mcp"]
     }
   }
 }
 ```
 
-**Important:** Remove any old references to `strava-mcp-server` (without the `@r-huijts/` prefix).
+**Important:** Remove any old references to `strava-mcp-server` (without the `@thaim/` prefix).
 
 ## Step 3: Restart Claude Desktop
 
@@ -38,10 +38,10 @@ Make sure your `~/Library/Application Support/Claude/claude_desktop_config.json`
 Test if the package works:
 
 ```bash
-npx -y @r-huijts/strava-mcp-server
+npx -y @thaim/strava-mcp
 ```
 
-You should see: "Starting Strava MCP Server v1.2.1..."
+You should see: "Starting Strava MCP Server v1.0.0..."
 
 ## Step 5: Check Claude Desktop Logs
 
