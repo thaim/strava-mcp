@@ -1,10 +1,10 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
-  "name": "io.github.r-huijts/strava-mcp",
+  "name": "io.github.thaim/strava-mcp",
   "description": "MCP server for accessing Strava API",
   "status": "active",
   "repository": {
-    "url": "https://github.com/r-huijts/strava-mcp",
+    "url": "https://github.com/thaim/strava-mcp",
     "source": "github"
   },
   "version": "1.0.0",
@@ -12,8 +12,8 @@
     {
       "registry_type": "npm",
       "registry_base_url": "https://registry.npmjs.org",
-      "identifier": "@r-huijts/strava-mcp-server",
-      "version": "1.2.1",
+      "identifier": "@thaim/strava-mcp",
+      "version": "1.0.0",
       "transport": {
         "type": "stdio"
       },
