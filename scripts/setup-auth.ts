@@ -1,4 +1,3 @@
-import axios from 'axios';
 import * as dotenv from 'dotenv';
 import * as readline from 'readline/promises';
 import * as fs from 'fs/promises';
@@ -123,14 +122,27 @@ async function main() {
   console.log('\nStep 2: Exchanging code for tokens...');
 
   try {
-    const response = await axios.post('https://www.strava.com/oauth/token', {
-        client_id: clientId,
-        client_secret: clientSecret,
-        code: authCode,
-        grant_type: 'authorization_code',
+    const fetchRes = await fetch('https://www.strava.com/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            client_id: clientId,
+            client_secret: clientSecret,
+            code: authCode,
+            grant_type: 'authorization_code',
+        }),
     });
 
-    const { access_token, refresh_token, expires_at } = response.data;
+    if (!fetchRes.ok) {
+        console.error('\n❌ Error exchanging code for tokens:');
+        console.error(`Status: ${fetchRes.status}`);
+        const errData = await fetchRes.json().catch(() => ({}));
+        console.error(`Data: ${JSON.stringify(errData)}`);
+        process.exit(1);
+    }
+
+    const response = await fetchRes.json();
+    const { access_token, refresh_token, expires_at } = response;
 
     if (!access_token || !refresh_token) {
         throw new Error('Failed to retrieve tokens from Strava.');
@@ -178,13 +190,8 @@ async function main() {
 
   } catch (error: any) {
     console.error('\n❌ Error exchanging code for tokens:');
-     if (axios.isAxiosError(error) && error.response) {
-        console.error(`Status: ${error.response.status}`);
-        console.error(`Data: ${JSON.stringify(error.response.data)}`);
-     } else {
-        console.error(error.message || error);
-     }
-     process.exit(1);
+    console.error(error.message || error);
+    process.exit(1);
   } finally {
     rl.close();
   }

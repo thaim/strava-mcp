@@ -1,6 +1,5 @@
 import http from 'http';
 import { URL } from 'url';
-import axios from 'axios';
 import { setupPage, successPage, errorPage, credentialsExistPage } from './pages.js';
 import { saveConfig, loadConfig, saveClientCredentials, hasClientCredentials, clearClientCredentials } from '../config.js';
 
@@ -132,14 +131,23 @@ export function startAuthServer(): Promise<AuthResult> {
                     // Exchange code for tokens
                     try {
                         const config = await loadConfig();
-                        const tokenResponse = await axios.post('https://www.strava.com/oauth/token', {
-                            client_id: config.clientId,
-                            client_secret: config.clientSecret,
-                            code: code,
-                            grant_type: 'authorization_code',
+                        const fetchRes = await fetch('https://www.strava.com/oauth/token', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                client_id: config.clientId,
+                                client_secret: config.clientSecret,
+                                code: code,
+                                grant_type: 'authorization_code',
+                            }),
                         });
-                        
-                        const { access_token, refresh_token, expires_at, athlete } = tokenResponse.data;
+                        if (!fetchRes.ok) {
+                            const errData = await fetchRes.json().catch(() => ({}));
+                            throw { response: { data: errData } };
+                        }
+                        const tokenResponse = await fetchRes.json();
+
+                        const { access_token, refresh_token, expires_at, athlete } = tokenResponse;
                         
                         // Save tokens
                         await saveConfig({

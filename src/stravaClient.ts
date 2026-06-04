@@ -1,27 +1,86 @@
-import axios from "axios";
 import { z } from "zod";
 
-// --- Axios Instance & Interceptor --- 
-// Create an Axios instance to apply interceptors globally for this client
-export const stravaApi = axios.create({
-    baseURL: 'https://www.strava.com/api/v3'
-});
+// --- Fetch-based HTTP Client ---
 
-// Add a request interceptor (can be used for logging or modifying requests)
-stravaApi.interceptors.request.use(config => {
-    // REMOVE DEBUG LOGS - Interfere with MCP Stdio transport
-    // let authHeaderLog = 'Not Set';
-    // const authHeaderValue = config.headers?.Authorization;
-    // if (typeof authHeaderValue === 'string') {
-    //     authHeaderLog = `${authHeaderValue.substring(0, 12)}...[REDACTED]`;
-    // }
-    // console.error(`[DEBUG stravaClient] Sending Request: ${config.method?.toUpperCase()} ${config.url}`);
-    // console.error(`[DEBUG stravaClient] Authorization Header: ${authHeaderLog}` );
-    return config;
-}, error => {
-    console.error('[DEBUG stravaClient] Request Error Interceptor:', error);
-    return Promise.reject(error);
-});
+const BASE_URL = 'https://www.strava.com/api/v3';
+
+/**
+ * Custom error class for fetch API errors, compatible with axios error shape
+ * so that existing error handling code (error.response?.status / error.response?.data) works unchanged.
+ */
+export class FetchApiError extends Error {
+    status: number;
+    response: { status: number; data: unknown };
+    constructor(status: number, message: string, data?: unknown) {
+        super(message);
+        this.name = 'FetchApiError';
+        this.status = status;
+        this.response = { status, data };
+    }
+}
+
+/**
+ * Reads the response body and throws a FetchApiError with appropriate message.
+ */
+async function throwFetchError(res: Response): Promise<never> {
+    const contentType = res.headers.get('content-type') ?? '';
+    let data: unknown;
+    let message: string;
+    if (contentType.includes('application/json')) {
+        data = await res.json().catch(() => ({}));
+        const jsonMessage = (typeof data === 'object' && data !== null && 'message' in data && typeof (data as Record<string, unknown>).message === 'string')
+            ? (data as Record<string, string>).message
+            : undefined;
+        message = jsonMessage ?? res.statusText ?? String(res.status);
+    } else {
+        data = await res.text().catch(() => '');
+        message = (typeof data === 'string' && data.length > 0) ? data : (res.statusText ?? String(res.status));
+    }
+    throw new FetchApiError(res.status, message, data);
+}
+
+/**
+ * Builds a URL from base and optional query params.
+ * If params is undefined, returns the base as-is (preserves existing query strings in path).
+ */
+function buildUrl(base: string, params?: Record<string, unknown>): string {
+    if (!params) return base;
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+        }
+    }
+    const qs = searchParams.toString();
+    return qs ? `${base}?${qs}` : base;
+}
+
+const defaultHeaders: Record<string, string> = {};
+
+export const stravaApi = {
+    defaults: { headers: { common: defaultHeaders } },
+    async get<T>(path: string, config?: { headers?: Record<string, string>; params?: Record<string, unknown>; responseType?: string }): Promise<{ data: T }> {
+        const rawUrl = BASE_URL + '/' + path.replace(/^\//, '');
+        const url = buildUrl(rawUrl, config?.params);
+        const headers = { ...defaultHeaders, ...config?.headers };
+        const res = await fetch(url, { headers });
+        if (!res.ok) {
+            await throwFetchError(res);
+        }
+        const data = config?.responseType === 'text' ? await res.text() : await res.json();
+        return { data: data as T };
+    },
+    async put<T>(path: string, body: unknown, config?: { headers?: Record<string, string> }): Promise<{ data: T }> {
+        const url = BASE_URL + '/' + path.replace(/^\//, '');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json', ...defaultHeaders, ...config?.headers };
+        const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
+        if (!res.ok) {
+            await throwFetchError(res);
+        }
+        return { data: await res.json() as T };
+    }
+};
+
 // ----------------------------------
 
 // Define the expected structure of a Strava activity (add more fields as needed)
@@ -347,17 +406,23 @@ async function refreshAccessToken(): Promise<string> {
 
     try {
         console.error('🔄 Refreshing Strava access token...');
-        const response = await axios.post('https://www.strava.com/oauth/token', {
-            client_id: clientId,
-            client_secret: clientSecret,
-            refresh_token: refreshToken,
-            grant_type: 'refresh_token'
+        const res = await fetch('https://www.strava.com/oauth/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                client_id: clientId,
+                client_secret: clientSecret,
+                refresh_token: refreshToken,
+                grant_type: 'refresh_token',
+            }),
         });
+        if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
+        const data = await res.json();
 
         // Update tokens in environment variables for the current process
-        const newAccessToken = response.data.access_token;
-        const newRefreshToken = response.data.refresh_token;
-        const expiresAt = response.data.expires_at;
+        const newAccessToken = data.access_token;
+        const newRefreshToken = data.refresh_token;
+        const expiresAt = data.expires_at;
 
         if (!newAccessToken || !newRefreshToken) {
             throw new Error('Refresh response missing required tokens');
@@ -383,7 +448,7 @@ async function refreshAccessToken(): Promise<string> {
  */
 export async function handleApiError<T>(error: unknown, context: string, retryFn?: () => Promise<T>): Promise<T> {
     // Check if it's an authentication error (401) that might be fixed by refreshing the token
-    if (axios.isAxiosError(error) && error.response?.status === 401 && retryFn) {
+    if (error instanceof FetchApiError && error.response?.status === 401 && retryFn) {
         try {
             console.error(`🔑 Authentication error in ${context}. Attempting to refresh token...`);
             await refreshAccessToken();
@@ -398,18 +463,18 @@ export async function handleApiError<T>(error: unknown, context: string, retryFn
     }
 
     // Check for subscription error (402)
-    if (axios.isAxiosError(error) && error.response?.status === 402) {
+    if (error instanceof FetchApiError && error.response?.status === 402) {
         console.error(`🔒 Subscription Required in ${context}. Status: 402`);
         // Throw a specific error type or use a unique message
         throw new Error(`SUBSCRIPTION_REQUIRED: Access to this feature requires a Strava subscription. Context: ${context}`);
     }
 
     // Standard error handling (existing code)
-    if (axios.isAxiosError(error)) {
+    if (error instanceof FetchApiError) {
         const status = error.response?.status || 'Unknown';
         const responseData = error.response?.data;
-        const message = (typeof responseData === 'object' && responseData !== null && 'message' in responseData && typeof responseData.message === 'string')
-            ? responseData.message
+        const message = (typeof responseData === 'object' && responseData !== null && 'message' in responseData && typeof (responseData as Record<string, unknown>).message === 'string')
+            ? (responseData as Record<string, string>).message
             : error.message;
         console.error(`Strava API request failed in ${context} with status ${status}: ${message}`);
         // Include response data in error log if helpful (be careful with sensitive data)
