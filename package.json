@@ -17,12 +17,11 @@
   },
   "files": [
     "dist",
-    "scripts",
     "README.md",
     "LICENSE"
   ],
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.14.0"
   },
   "scripts": {
     "build": "tsc",

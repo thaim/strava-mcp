@@ -338,6 +338,51 @@ The server implements the Model Context Protocol (MCP) for Strava API v3. See th
 
 ---
 
+## Publishing (maintainers)
+
+This section is for maintainers releasing `@thaim/strava-mcp` to npm. Regular users do not need to read it.
+
+Releases are published from GitHub Actions using npm [Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (OIDC), so no npm token is stored in repository secrets. Provenance attestation is generated automatically.
+
+### One-time setup
+
+Trusted Publishing requires the package to already exist on npm, so the very first release must be published manually:
+
+1. From a local clone, log in with two-factor authentication enabled:
+
+   ```bash
+   npm login
+   ```
+
+2. Publish the initial version manually:
+
+   ```bash
+   npm publish
+   ```
+
+3. On [npmjs.com](https://www.npmjs.com/), open the package settings and go to **Publishing → Trusted Publishers**, then register a GitHub Actions publisher with these values (case-sensitive, exact match):
+
+   | Field | Value |
+   |-------|-------|
+   | Repository owner | `thaim` |
+   | Repository name | `strava-mcp` |
+   | Workflow filename | `publish.yml` |
+
+4. In the package settings, enable **Require two-factor authentication and disallow tokens**.
+
+### Releasing a new version
+
+After the one-time setup, releases are fully automated. Bump the version, create a tag, and push it:
+
+```bash
+git tag vX.Y.Z
+git push --tags
+```
+
+Pushing a `v*` tag triggers the `Publish` workflow (`.github/workflows/publish.yml`), which publishes to npm via OIDC.
+
+---
+
 ## License
 
 MIT License - see LICENSE file for details.
