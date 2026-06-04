@@ -27,6 +27,7 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
 
       # Trusted Publishing (OIDC) には npm 11.5.1 以上が必要なため最新版へ更新する
       - name: Update npm
